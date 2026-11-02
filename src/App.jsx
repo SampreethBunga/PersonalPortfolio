@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { AuthProvider } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import UserModule from './components/UserModule';
@@ -30,6 +31,7 @@ export default function App() {
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
         />
+        <SpeedInsights />
       </div>
     </AuthProvider>
   );
