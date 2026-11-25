@@ -44,10 +44,10 @@ const DEFAULT_PORTFOLIOS = {
       problem:
         'Developers need a distraction-free workspace to showcase builds and inspect case studies without heavy setup.',
       solution:
-        'Built a monochrome workspace with per-user authentication, live stack telemetry, and modal case studies.',
+        'Built a responsive workspace with per-user authentication, live stack telemetry, and modal case studies.',
       highlights: [
         'Per-user authentication with isolated project catalogs',
-        'Minimalist monochrome UI with dynamic stack analytics',
+        'Dynamic stack analytics and interactive case-study modals',
       ],
       tech: ['React', 'Tailwind CSS', 'Vite', 'Vercel'],
       githubUrl: 'https://github.com',
@@ -74,16 +74,30 @@ const DEFAULT_PORTFOLIOS = {
   ],
 };
 
+const DEFAULT_SKILLS = {
+  user_sampreeth: [
+    { id: 'sk_1', name: 'React', level: 'Advanced', group: 'Frontend' },
+    { id: 'sk_2', name: 'JavaScript (ES6+)', level: 'Advanced', group: 'Frontend' },
+    { id: 'sk_3', name: 'Tailwind CSS', level: 'Advanced', group: 'Frontend' },
+    { id: 'sk_4', name: 'Java / OOP', level: 'Intermediate', group: 'Core CS' },
+    { id: 'sk_5', name: 'Python', level: 'Intermediate', group: 'Core CS' },
+    { id: 'sk_6', name: 'STM32 / Embedded C', level: 'Intermediate', group: 'Systems' },
+  ],
+};
+
 export function AuthProvider({ children }) {
   const [users, setUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [portfolios, setPortfolios] = useState({});
+  const [skillsByUser, setSkillsByUser] = useState({});
   const [activePortfolioUserId, setActivePortfolioUserId] = useState('user_sampreeth');
 
   useEffect(() => {
     const storedUsers = JSON.parse(localStorage.getItem('app_users')) || DEFAULT_USERS;
     const storedPortfolios =
       JSON.parse(localStorage.getItem('app_portfolios')) || DEFAULT_PORTFOLIOS;
+    const storedSkills =
+      JSON.parse(localStorage.getItem('app_skills')) || DEFAULT_SKILLS;
     const savedSessionId = localStorage.getItem('app_session_user_id');
 
     if (!localStorage.getItem('app_users')) {
@@ -92,9 +106,13 @@ export function AuthProvider({ children }) {
     if (!localStorage.getItem('app_portfolios')) {
       localStorage.setItem('app_portfolios', JSON.stringify(storedPortfolios));
     }
+    if (!localStorage.getItem('app_skills')) {
+      localStorage.setItem('app_skills', JSON.stringify(storedSkills));
+    }
 
     setUsers(storedUsers);
     setPortfolios(storedPortfolios);
+    setSkillsByUser(storedSkills);
 
     if (savedSessionId) {
       const found = storedUsers.find((u) => u.id === savedSessionId);
@@ -113,6 +131,11 @@ export function AuthProvider({ children }) {
   const persistPortfolios = (nextPortfolios) => {
     setPortfolios(nextPortfolios);
     localStorage.setItem('app_portfolios', JSON.stringify(nextPortfolios));
+  };
+
+  const persistSkills = (nextSkillsByUser) => {
+    setSkillsByUser(nextSkillsByUser);
+    localStorage.setItem('app_skills', JSON.stringify(nextSkillsByUser));
   };
 
   const login = (email, password) => {
@@ -142,7 +165,7 @@ export function AuthProvider({ children }) {
       password,
       role: 'creator',
       headline: headline?.trim() || 'Developer & Builder',
-      bio: 'Welcome to my minimalist portfolio workspace.',
+      bio: 'Welcome to my portfolio workspace.',
       location: '',
     };
 
@@ -151,9 +174,14 @@ export function AuthProvider({ children }) {
       ...portfolios,
       [newUser.id]: [],
     };
+    const nextSkills = {
+      ...skillsByUser,
+      [newUser.id]: [],
+    };
 
     persistUsers(nextUsers);
     persistPortfolios(nextPortfolios);
+    persistSkills(nextSkills);
     setCurrentUser(newUser);
     setActivePortfolioUserId(newUser.id);
     localStorage.setItem('app_session_user_id', newUser.id);
@@ -181,9 +209,18 @@ export function AuthProvider({ children }) {
     persistPortfolios(nextPortfolios);
   };
 
+  const saveUserSkills = (userId, nextSkillList) => {
+    const nextSkills = {
+      ...skillsByUser,
+      [userId]: nextSkillList,
+    };
+    persistSkills(nextSkills);
+  };
+
   const activeOwner =
     users.find((u) => u.id === activePortfolioUserId) || users[0] || DEFAULT_USERS[0];
   const activeProjects = portfolios[activeOwner?.id] || [];
+  const activeSkills = skillsByUser[activeOwner?.id] || [];
 
   return (
     <AuthContext.Provider
@@ -192,6 +229,7 @@ export function AuthProvider({ children }) {
         currentUser,
         activeOwner,
         activeProjects,
+        activeSkills,
         activePortfolioUserId,
         setActivePortfolioUserId,
         login,
@@ -199,6 +237,7 @@ export function AuthProvider({ children }) {
         logout,
         updateUserProfile,
         saveUserProjects,
+        saveUserSkills,
       }}
     >
       {children}

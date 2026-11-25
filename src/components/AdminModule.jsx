@@ -1,4 +1,3 @@
-// src/components/AdminModule.jsx
 import React, { useState, useEffect } from 'react';
 import {
   Plus,
@@ -9,6 +8,7 @@ import {
   Eraser,
   X,
   UserCheck,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -24,7 +24,15 @@ const EMPTY_FORM = {
 };
 
 export default function AdminModule({ showToast }) {
-  const { currentUser, activeProjects, updateUserProfile, saveUserProjects } = useAuth();
+  const {
+    currentUser,
+    activeProjects,
+    activeSkills,
+    updateUserProfile,
+    saveUserProjects,
+    saveUserSkills,
+  } = useAuth();
+
   const [messages, setMessages] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -33,6 +41,11 @@ export default function AdminModule({ showToast }) {
     name: '',
     headline: '',
     bio: '',
+  });
+  const [skillForm, setSkillForm] = useState({
+    name: '',
+    group: 'Frontend',
+    level: 'Intermediate',
   });
 
   useEffect(() => {
@@ -49,6 +62,8 @@ export default function AdminModule({ showToast }) {
 
   if (!currentUser) return null;
 
+  const userSkills = Array.isArray(activeSkills) ? activeSkills : [];
+
   const handleProfileSave = (e) => {
     e.preventDefault();
     updateUserProfile(currentUser.id, {
@@ -57,6 +72,39 @@ export default function AdminModule({ showToast }) {
       bio: profileForm.bio.trim(),
     });
     showToast?.('Profile updated');
+  };
+
+  const handleAddSkill = (e) => {
+    e.preventDefault();
+    const cleanName = skillForm.name.trim();
+    if (!cleanName) return;
+
+    const duplicate = userSkills.some(
+      (s) => s.name.toLowerCase() === cleanName.toLowerCase()
+    );
+    if (duplicate) {
+      showToast?.('Skill already in your list');
+      return;
+    }
+
+    const nextSkills = [
+      ...userSkills,
+      {
+        id: `skill_${Date.now()}`,
+        name: cleanName,
+        group: skillForm.group,
+        level: skillForm.level,
+      },
+    ];
+    saveUserSkills(currentUser.id, nextSkills);
+    setSkillForm((prev) => ({ ...prev, name: '' }));
+    showToast?.(`Added ${cleanName}`);
+  };
+
+  const handleRemoveSkill = (skillId) => {
+    const nextSkills = userSkills.filter((s) => s.id !== skillId);
+    saveUserSkills(currentUser.id, nextSkills);
+    showToast?.('Skill removed');
   };
 
   const openAddModal = () => {
@@ -137,7 +185,7 @@ export default function AdminModule({ showToast }) {
             My Portfolio Studio
           </h1>
           <p className="text-xs text-zinc-500 mt-1">
-            Customize your public bio, publish projects, and review messages
+            Customize your public bio, manage skills, publish projects, and review messages
           </p>
         </div>
         <button
@@ -200,6 +248,78 @@ export default function AdminModule({ showToast }) {
           />
         </div>
       </form>
+
+      {/* Skills Manager Card */}
+      <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xs space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            Skills
+          </h2>
+          <span className="text-xs font-semibold text-zinc-500">{userSkills.length} added</span>
+        </div>
+
+        <form onSubmit={handleAddSkill} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+          <input
+            type="text"
+            required
+            placeholder="e.g., TypeScript, Docker, SQL"
+            value={skillForm.name}
+            onChange={(e) => setSkillForm((prev) => ({ ...prev, name: e.target.value }))}
+            className="sm:col-span-5 rounded-xl border border-zinc-200 bg-stone-50 px-3.5 py-2 text-sm text-zinc-900 placeholder-zinc-400 focus:bg-white focus:border-yellow-400 focus:outline-none"
+          />
+          <select
+            value={skillForm.group}
+            onChange={(e) => setSkillForm((prev) => ({ ...prev, group: e.target.value }))}
+            className="sm:col-span-3 rounded-xl border border-zinc-200 bg-stone-50 px-3 py-2 text-sm text-zinc-900 focus:bg-white focus:border-yellow-400 focus:outline-none"
+          >
+            <option value="Frontend">Frontend</option>
+            <option value="Backend">Backend</option>
+            <option value="Full Stack">Full Stack</option>
+            <option value="Core CS">Core CS</option>
+            <option value="Systems">Systems</option>
+          </select>
+          <select
+            value={skillForm.level}
+            onChange={(e) => setSkillForm((prev) => ({ ...prev, level: e.target.value }))}
+            className="sm:col-span-2 rounded-xl border border-zinc-200 bg-stone-50 px-3 py-2 text-sm text-zinc-900 focus:bg-white focus:border-yellow-400 focus:outline-none"
+          >
+            <option value="Beginner">Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+          </select>
+          <button
+            type="submit"
+            className="sm:col-span-2 rounded-xl bg-yellow-400 hover:bg-yellow-300 active:scale-95 px-4 py-2 text-xs font-bold text-zinc-950 transition"
+          >
+            Add Skill
+          </button>
+        </form>
+
+        <div className="flex flex-wrap gap-2 pt-1">
+          {userSkills.length === 0 ? (
+            <p className="text-xs text-zinc-500">No skills added yet.</p>
+          ) : (
+            userSkills.map((skill) => (
+              <span
+                key={skill.id}
+                className="inline-flex items-center gap-2 rounded-xl border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-xs font-semibold text-zinc-900 transition hover:bg-yellow-100 animate-modal-in"
+              >
+                <span>{skill.name}</span>
+                <span className="text-[11px] font-medium text-zinc-500">· {skill.level}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveSkill(skill.id)}
+                  aria-label={`Remove ${skill.name}`}
+                  className="text-zinc-500 hover:text-zinc-950 active:scale-90 transition"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            ))
+          )}
+        </div>
+      </div>
 
       {/* Projects & Inbox */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -308,7 +428,7 @@ export default function AdminModule({ showToast }) {
       {/* Animated Add/Edit Project Modal */}
       {modalOpen && (
         <div
-          className="fixed inset-0 bg-zinc-950/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-backdrop-in"
+          className="fixed inset-0 bg-zinc-950/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-backdrop-in"
           onClick={() => setModalOpen(false)}
           role="dialog"
           aria-modal="true"
