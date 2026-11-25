@@ -82,10 +82,11 @@ function WorkspaceShell() {
 
       {/* Left Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 shrink-0 border-r border-slate-800/90 bg-[#081518] flex flex-col justify-between transition-transform duration-200 ${
+        className={`fixed lg:sticky lg:top-0 lg:h-screen inset-y-0 left-0 z-50 w-64 shrink-0 flex flex-col justify-between overflow-hidden border-r border-slate-800/90 bg-[#081518] transition-transform duration-200 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
+      
         <div className="p-5 space-y-7 overflow-y-auto">
           {/* Brand */}
           <div className="flex items-center justify-between">
