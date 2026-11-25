@@ -1,17 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Send,
   CheckCircle2,
   Layers,
   ArrowUpRight,
   RotateCcw,
-  Share2,
   X,
-  Sparkles,
   Loader2,
+  FolderKanban,
+  Code2,
+  MessageSquare,
+  Sparkles,
 } from 'lucide-react';
 
 const CATEGORIES = ['All', 'Frontend', 'Backend', 'Full Stack'];
+
+const CATEGORY_COLORS = {
+  'Full Stack': { stroke: '#2dd4bf', dot: 'bg-teal-400', badge: 'text-teal-300 bg-teal-500/10 border-teal-500/25' },
+  Frontend: { stroke: '#60a5fa', dot: 'bg-blue-400', badge: 'text-blue-300 bg-blue-500/10 border-blue-500/25' },
+  Backend: { stroke: '#a78bfa', dot: 'bg-violet-400', badge: 'text-violet-300 bg-violet-500/10 border-violet-500/25' },
+  Other: { stroke: '#fbbf24', dot: 'bg-amber-400', badge: 'text-amber-300 bg-amber-500/10 border-amber-500/25' },
+};
 
 const DEFAULT_PROJECTS = [
   {
@@ -69,6 +78,7 @@ const DEFAULT_PROJECTS = [
 
 export default function UserModule({ showToast }) {
   const [projects, setProjects] = useState([]);
+  const [messagesCount, setMessagesCount] = useState(0);
   const [filter, setFilter] = useState('All');
   const [selectedProject, setSelectedProject] = useState(null);
   const [contactData, setContactData] = useState({ name: '', email: '', message: '' });
@@ -89,7 +99,9 @@ export default function UserModule({ showToast }) {
       localStorage.setItem('projects', JSON.stringify(DEFAULT_PROJECTS));
     }
     const loadedProjects = JSON.parse(localStorage.getItem('projects')) || [];
+    const loadedMessages = JSON.parse(localStorage.getItem('messages')) || [];
     setProjects(loadedProjects);
+    setMessagesCount(loadedMessages.length);
   }, []);
 
   useEffect(() => {
@@ -101,14 +113,46 @@ export default function UserModule({ showToast }) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [selectedProject]);
 
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      notify('Portfolio link copied to clipboard!');
-    } catch {
-      notify('Could not copy link automatically.');
-    }
-  };
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  }, []);
+
+  // Category distribution for Donut Chart
+  const categoryStats = useMemo(() => {
+    const total = projects.length;
+    const order = ['Full Stack', 'Frontend', 'Backend'];
+    const counts = order.map((cat) => {
+      const count = projects.filter((p) => p.category === cat).length;
+      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+      return {
+        label: cat,
+        count,
+        pct,
+        color: CATEGORY_COLORS[cat] || CATEGORY_COLORS.Other,
+      };
+    });
+    return { total, items: counts };
+  }, [projects]);
+
+  // Top technologies for Horizontal Progress Bars
+  const techStats = useMemo(() => {
+    const freq = {};
+    projects.forEach((p) => {
+      (Array.isArray(p.tech) ? p.tech : []).forEach((t) => {
+        const key = t.trim();
+        if (key) freq[key] = (freq[key] || 0) + 1;
+      });
+    });
+    const entries = Object.entries(freq)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+      .slice(0, 6);
+    const max = entries.length > 0 ? entries[0].count : 1;
+    return { entries, max, uniqueTotal: Object.keys(freq).length };
+  }, [projects]);
 
   const handleContactSubmit = async (e) => {
     e.preventDefault();
@@ -140,12 +184,13 @@ export default function UserModule({ showToast }) {
         date: new Date().toLocaleString(),
       });
       localStorage.setItem('messages', JSON.stringify(messages));
+      setMessagesCount(messages.length);
 
       if (result.success) {
         notify('Message sent successfully!');
         setContactData({ name: '', email: '', message: '' });
       } else {
-        notify(result.message || 'Saved locally; check Web3Forms response.');
+        notify(result.message || 'Saved locally.');
       }
     } catch {
       const messages = JSON.parse(localStorage.getItem('messages')) || [];
@@ -155,280 +200,428 @@ export default function UserModule({ showToast }) {
         date: new Date().toLocaleString(),
       });
       localStorage.setItem('messages', JSON.stringify(messages));
-      notify('Saved locally (offline/network fallback).');
+      setMessagesCount(messages.length);
+      notify('Saved locally (offline fallback).');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const getCategoryCount = (cat) =>
-    cat === 'All' ? projects.length : projects.filter((p) => p.category === cat).length;
-
   const filteredProjects =
     filter === 'All' ? projects : projects.filter((p) => p.category === filter);
 
+  // SVG Donut Geometry
+  const radius = 44;
+  const circumference = 2 * Math.PI * radius;
+  let cumulativeFraction = 0;
+
+  const fullStackCount = projects.filter((p) => p.category === 'Full Stack').length;
+  const fullStackShare =
+    projects.length > 0 ? Math.round((fullStackCount / projects.length) * 100) : 0;
+
   return (
-    <div className="space-y-16">
+    <div id="overview" className="space-y-6 scroll-mt-24">
       {!showToast && localToast && (
-        <div className="fixed bottom-5 right-5 bg-indigo-600 text-white px-4 py-3 rounded-lg shadow-xl z-50 flex items-center gap-2">
-          <CheckCircle2 className="w-5 h-5 text-emerald-300" />
+        <div className="fixed bottom-5 right-5 bg-[#0b1d21] border border-teal-500/30 text-white px-4 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-2 text-sm">
+          <CheckCircle2 className="w-4 h-4 text-teal-400" />
           <span>{localToast}</span>
         </div>
       )}
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/90 to-slate-950 px-6 py-12 sm:px-10 sm:py-16 text-center space-y-5">
-        <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3.5 py-1 text-xs font-medium text-indigo-300">
-          <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Interactive Hackathon &amp; Project Showcase</span>
-        </div>
-
-        <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
-          Hi, I&apos;m <span className="text-indigo-400">Sampreeth Bunga</span>
-        </h1>
-
-        <p className="text-slate-300 sm:text-lg max-w-2xl mx-auto leading-relaxed">
-          Computer Science &amp; Engineering Student building full-stack web apps, clean UI
-          workflows, and practical systems projects.
-        </p>
-
-        <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
-          <a
-            href="#projects"
-            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition"
-          >
-            Explore Projects
-            <ArrowUpRight className="w-4 h-4" />
-          </a>
-          <a
-            href="#contact"
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-800 px-5 py-2.5 text-sm font-semibold text-slate-200 transition"
-          >
-            Get In Touch
-          </a>
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/80 hover:border-slate-700 px-4 py-2.5 text-sm font-medium text-slate-300 hover:text-white transition"
-          >
-            <Share2 className="w-4 h-4 text-indigo-400" />
-            Copy Link
-          </button>
-        </div>
-      </section>
-
-      {/* Projects Showcase */}
-      <section id="projects" className="scroll-mt-24 space-y-6">
-        <div className="text-center space-y-1.5">
-          <h2 className="text-2xl sm:text-3xl font-bold text-white flex items-center justify-center gap-2">
-            <Layers className="w-6 h-6 text-indigo-400" />
-            Project Showcase
-          </h2>
-          <p className="text-slate-400 text-sm">
-            Click any project card to inspect architecture highlights and stack details
+      {/* Workspace Header */}
+      <section className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+            {greeting}, Sampreeth
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
+            A live view of portfolio projects, stack distribution, and interactive case studies.
           </p>
         </div>
 
-        {/* Categories Filter */}
-        <div className="flex justify-center gap-2 flex-wrap">
-          {CATEGORIES.map((cat) => {
-            const count = getCategoryCount(cat);
-            const active = filter === cat;
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setFilter(cat)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                  active
-                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
-                    : 'bg-slate-800/90 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white'
-                }`}
-              >
-                <span>{cat}</span>
-                <span
-                  className={`text-xs px-1.5 py-0.5 rounded-md ${
-                    active ? 'bg-indigo-500/40 text-white' : 'bg-slate-900 text-slate-400'
+        <div className="flex items-center gap-2.5">
+          <a
+            href="#projects"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500/15 hover:bg-teal-500/25 border border-teal-400/30 px-3.5 py-2 text-xs font-semibold text-teal-300 transition"
+          >
+            Browse Projects
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </a>
+          <a
+            href="#contact"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-[#0b191d] hover:bg-slate-800/80 px-3.5 py-2 text-xs font-semibold text-slate-200 transition"
+          >
+            Get In Touch
+          </a>
+        </div>
+      </section>
+
+      {/* 4-Card KPI Strip */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-xl border border-slate-800/90 bg-[#0b191d] p-5">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Total projects</span>
+            <FolderKanban className="w-4 h-4 text-teal-400/80" />
+          </div>
+          <div className="mt-2.5 text-3xl font-bold text-white">{projects.length}</div>
+          <p className="mt-1.5 text-xs text-slate-500">
+            {CATEGORIES.length - 1} active tracks
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-800/90 bg-[#0b191d] p-5">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Technologies</span>
+            <Code2 className="w-4 h-4 text-blue-400/80" />
+          </div>
+          <div className="mt-2.5 text-3xl font-bold text-white">{techStats.uniqueTotal}</div>
+          <p className="mt-1.5 text-xs text-slate-500">Distinct tools &amp; frameworks</p>
+        </div>
+
+        <div className="rounded-xl border border-slate-800/90 bg-[#0b191d] p-5">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Full stack ratio</span>
+            <Sparkles className="w-4 h-4 text-violet-400/80" />
+          </div>
+          <div className="mt-2.5 text-3xl font-bold text-white">{fullStackShare}%</div>
+          <p className="mt-1.5 text-xs text-slate-500">
+            {fullStackCount} of {projects.length} end-to-end builds
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-slate-800/90 bg-[#0b191d] p-5">
+          <div className="flex items-center justify-between text-xs text-slate-400">
+            <span>Inquiries</span>
+            <MessageSquare className="w-4 h-4 text-amber-400/80" />
+          </div>
+          <div className="mt-2.5 text-3xl font-bold text-white">{messagesCount}</div>
+          <p className="mt-1.5 text-xs text-slate-500">Logged via contact form</p>
+        </div>
+      </section>
+
+      {/* Analytics Row: Donut Chart + Horizontal Bars */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Category Distribution Donut */}
+        <div className="rounded-xl border border-slate-800/90 bg-[#0b191d] p-6">
+          <h2 className="text-base font-semibold text-white">Category distribution</h2>
+
+          <div className="mt-5 flex flex-col sm:flex-row items-center gap-7">
+            <div className="relative h-36 w-36 shrink-0 flex items-center justify-center">
+              <svg className="h-36 w-36 -rotate-90" viewBox="0 0 112 112">
+                <circle
+                  cx="56"
+                  cy="56"
+                  r={radius}
+                  fill="transparent"
+                  stroke="#13262b"
+                  strokeWidth="12"
+                />
+                {categoryStats.total > 0 &&
+                  categoryStats.items.map((item) => {
+                    if (item.count === 0) return null;
+                    const fraction = item.count / categoryStats.total;
+                    const dashLength = Math.max(fraction * circumference - 3, 2);
+                    const dashOffset = -cumulativeFraction * circumference;
+                    cumulativeFraction += fraction;
+
+                    return (
+                      <circle
+                        key={item.label}
+                        cx="56"
+                        cy="56"
+                        r={radius}
+                        fill="transparent"
+                        stroke={item.color.stroke}
+                        strokeWidth="12"
+                        strokeDasharray={`${dashLength} ${circumference}`}
+                        strokeDashoffset={dashOffset}
+                        strokeLinecap="round"
+                      />
+                    );
+                  })}
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <span className="text-2xl font-bold text-white">{categoryStats.total}</span>
+                <span className="text-[11px] text-slate-400">projects</span>
+              </div>
+            </div>
+
+            <div className="flex-1 w-full space-y-3">
+              {categoryStats.items.map((item) => (
+                <div
+                  key={item.label}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className={`h-2.5 w-2.5 rounded-xs ${item.color.dot}`} />
+                    <span className="text-slate-200">{item.label}</span>
+                  </div>
+                  <div className="flex items-center gap-4 tabular-nums">
+                    <span className="font-semibold text-white">{item.count}</span>
+                    <span className="w-9 text-right text-xs text-slate-400">{item.pct}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Most Used Technologies Progress Bars */}
+        <div className="rounded-xl border border-slate-800/90 bg-[#0b191d] p-6">
+          <h2 className="text-base font-semibold text-white">Most used technologies</h2>
+
+          <div className="mt-5 space-y-3.5">
+            {techStats.entries.length === 0 ? (
+              <p className="text-sm text-slate-500">No technology tags added yet.</p>
+            ) : (
+              techStats.entries.map((tech) => {
+                const widthPct = Math.round((tech.count / techStats.max) * 100);
+                return (
+                  <div key={tech.name} className="grid grid-cols-12 items-center gap-3 text-sm">
+                    <span className="col-span-4 truncate text-slate-300">{tech.name}</span>
+                    <div className="col-span-7 h-2 rounded-full bg-[#13262b] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-teal-400 to-cyan-300 transition-all duration-300"
+                        style={{ width: `${widthPct}%` }}
+                      />
+                    </div>
+                    <span className="col-span-1 text-right font-semibold text-slate-200 tabular-nums">
+                      {tech.count}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Project Showcase Section */}
+      <section id="projects" className="scroll-mt-24 rounded-xl border border-slate-800/90 bg-[#0b191d] p-6 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-white flex items-center gap-2">
+              <Layers className="w-4 h-4 text-teal-400" />
+              Project showcase
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Click any card to inspect problem breakdown, architecture highlights, and stack
+            </p>
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex flex-wrap gap-1.5">
+            {CATEGORIES.map((cat) => {
+              const count =
+                cat === 'All'
+                  ? projects.length
+                  : projects.filter((p) => p.category === cat).length;
+              const active = filter === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setFilter(cat)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                    active
+                      ? 'bg-teal-500/20 text-teal-300 border border-teal-400/40'
+                      : 'bg-[#081316] text-slate-400 border border-slate-800 hover:text-white hover:border-slate-700'
                   }`}
                 >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+                  <span>{cat}</span>
+                  <span className="text-[11px] opacity-80">{count}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Project Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredProjects.length === 0 ? (
-            <div className="col-span-full rounded-xl border border-dashed border-slate-700 bg-slate-900/50 text-center py-12 px-4 space-y-3">
-              <p className="text-slate-400">
+            <div className="col-span-full rounded-xl border border-dashed border-slate-800 bg-[#081316] text-center py-10 px-4 space-y-3">
+              <p className="text-sm text-slate-400">
                 No projects found for category &ldquo;{filter}&rdquo;.
               </p>
               <button
                 type="button"
                 onClick={() => setFilter('All')}
-                className="inline-flex items-center gap-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 px-3.5 py-1.5 text-xs font-medium text-slate-200 transition"
               >
-                <RotateCcw className="w-4 h-4" />
-                Show All Projects
+                <RotateCcw className="w-3.5 h-3.5" />
+                Reset filter
               </button>
             </div>
           ) : (
-            filteredProjects.map((p) => (
-              <article
-                key={p.id}
-                onClick={() => setSelectedProject(p)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    setSelectedProject(p);
-                  }
-                }}
-                tabIndex={0}
-                role="button"
-                className="group cursor-pointer bg-slate-800/80 border border-slate-700/90 rounded-xl p-6 flex flex-col justify-between hover:-translate-y-0.5 hover:border-indigo-500/60 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-md"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="inline-block bg-indigo-500/10 text-indigo-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-indigo-500/20">
-                      {p.category}
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-indigo-300 transition-colors">
-                      Details
-                      <ArrowUpRight className="w-3.5 h-3.5" />
-                    </span>
-                  </div>
-                  <h3 className="text-xl font-bold text-white group-hover:text-indigo-200 transition-colors">
-                    {p.title}
-                  </h3>
-                  <p className="text-slate-300/90 text-sm leading-relaxed">{p.description}</p>
-                </div>
+            filteredProjects.map((p) => {
+              const catStyle = CATEGORY_COLORS[p.category] || CATEGORY_COLORS.Other;
+              return (
+                <article
+                  key={p.id}
+                  onClick={() => setSelectedProject(p)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedProject(p);
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  className="group cursor-pointer rounded-xl border border-slate-800 bg-[#081316] p-5 flex flex-col justify-between hover:-translate-y-0.5 hover:border-teal-500/50 focus:outline-none focus:ring-2 focus:ring-teal-500/60 transition-all"
+                >
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`inline-block text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${catStyle.badge}`}
+                      >
+                        {p.category}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-xs text-slate-500 group-hover:text-teal-300 transition">
+                        Inspect
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
 
-                <div className="mt-6 flex flex-wrap gap-2">
-                  {(Array.isArray(p.tech) ? p.tech : []).map((t, i) => (
-                    <span
-                      key={i}
-                      className="bg-slate-900/90 text-slate-300 text-xs px-2.5 py-1 rounded border border-slate-700"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </article>
-            ))
+                    <h3 className="text-base font-bold text-white group-hover:text-teal-200 transition">
+                      {p.title}
+                    </h3>
+                    <p className="text-xs leading-relaxed text-slate-400">{p.description}</p>
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap gap-1.5">
+                    {(Array.isArray(p.tech) ? p.tech : []).map((t, i) => (
+                      <span
+                        key={i}
+                        className="bg-[#0d1e23] text-slate-300 text-[11px] px-2 py-0.5 rounded border border-slate-800"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </article>
+              );
+            })
           )}
         </div>
       </section>
 
-      {/* Contact Section */}
+      {/* Contact Card */}
       <section
         id="contact"
-        className="scroll-mt-24 max-w-xl mx-auto w-full bg-slate-800/60 border border-slate-700 p-6 sm:p-8 rounded-2xl shadow-xl"
+        className="scroll-mt-24 rounded-xl border border-slate-800/90 bg-[#0b191d] p-6"
       >
-        <div className="text-center mb-6 space-y-1">
-          <h2 className="text-2xl font-bold text-white">Get In Touch</h2>
-          <p className="text-xs sm:text-sm text-slate-400">
-            Have feedback, collaboration ideas, or hackathon questions? Drop a note.
-          </p>
+        <div className="max-w-xl mx-auto">
+          <div className="mb-5">
+            <h2 className="text-base font-semibold text-white">Get In Touch</h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Send feedback, collaboration ideas, or hackathon inquiries directly.
+            </p>
+          </div>
+
+          <form onSubmit={handleContactSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label
+                  htmlFor="contact-name"
+                  className="block text-xs font-medium text-slate-300 mb-1.5"
+                >
+                  Name
+                </label>
+                <input
+                  id="contact-name"
+                  type="text"
+                  name="name"
+                  required
+                  value={contactData.name}
+                  onChange={(e) => setContactData((prev) => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3.5 py-2 rounded-lg bg-[#081316] border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500/60 transition"
+                  placeholder="Your Name"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="contact-email"
+                  className="block text-xs font-medium text-slate-300 mb-1.5"
+                >
+                  Email
+                </label>
+                <input
+                  id="contact-email"
+                  type="email"
+                  name="email"
+                  required
+                  value={contactData.email}
+                  onChange={(e) => setContactData((prev) => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-3.5 py-2 rounded-lg bg-[#081316] border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500/60 transition"
+                  placeholder="you@example.com"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="contact-message"
+                className="block text-xs font-medium text-slate-300 mb-1.5"
+              >
+                Message
+              </label>
+              <textarea
+                id="contact-message"
+                name="message"
+                required
+                rows="3"
+                value={contactData.message}
+                onChange={(e) => setContactData((prev) => ({ ...prev, message: e.target.value }))}
+                className="w-full px-3.5 py-2 rounded-lg bg-[#081316] border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-teal-500/60 transition"
+                placeholder="Your inquiry message..."
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 py-2 px-5 bg-teal-500 hover:bg-teal-400 disabled:opacity-60 rounded-lg text-slate-950 text-sm font-semibold transition"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Send Message
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </div>
-
-        <form onSubmit={handleContactSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="contact-name" className="block text-sm font-medium text-slate-200 mb-1">
-              Name
-            </label>
-            <input
-              id="contact-name"
-              type="text"
-              name="name"
-              required
-              value={contactData.name}
-              onChange={(e) => setContactData((prev) => ({ ...prev, name: e.target.value }))}
-              className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
-              placeholder="Your Name"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="contact-email"
-              className="block text-sm font-medium text-slate-200 mb-1"
-            >
-              Email
-            </label>
-            <input
-              id="contact-email"
-              type="email"
-              name="email"
-              required
-              value={contactData.email}
-              onChange={(e) => setContactData((prev) => ({ ...prev, email: e.target.value }))}
-              className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="contact-message"
-              className="block text-sm font-medium text-slate-200 mb-1"
-            >
-              Message
-            </label>
-            <textarea
-              id="contact-message"
-              name="message"
-              required
-              rows="4"
-              value={contactData.message}
-              onChange={(e) => setContactData((prev) => ({ ...prev, message: e.target.value }))}
-              className="w-full px-4 py-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition"
-              placeholder="Your inquiry message..."
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 rounded-lg text-white font-semibold transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Sending...
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4" />
-                Send Message
-              </>
-            )}
-          </button>
-        </form>
       </section>
 
-      {/* Project Detail Modal */}
+      {/* Project Case-Study Modal */}
       {selectedProject && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs"
           onClick={() => setSelectedProject(null)}
           role="dialog"
           aria-modal="true"
           aria-labelledby="selected-project-title"
         >
           <div
-            className="w-full max-w-xl rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl overflow-hidden"
+            className="w-full max-w-xl rounded-2xl border border-slate-800 bg-[#0b191d] shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-6 py-4">
               <div>
-                <span className="inline-block bg-indigo-500/10 text-indigo-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-indigo-500/20">
+                <span className="inline-block bg-teal-500/10 text-teal-300 text-xs font-medium px-2.5 py-0.5 rounded-full border border-teal-500/25">
                   {selectedProject.category}
                 </span>
                 <h3
                   id="selected-project-title"
-                  className="mt-2 text-xl sm:text-2xl font-bold text-white"
+                  className="mt-2 text-xl font-bold text-white"
                 >
                   {selectedProject.title}
                 </h3>
@@ -449,19 +642,23 @@ export default function UserModule({ showToast }) {
               {(selectedProject.problem || selectedProject.solution) && (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {selectedProject.problem && (
-                    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3.5">
+                    <div className="rounded-xl border border-slate-800 bg-[#081316] p-3.5">
                       <p className="text-xs font-semibold uppercase tracking-wider text-amber-400 mb-1">
                         Problem
                       </p>
-                      <p className="leading-relaxed text-slate-300">{selectedProject.problem}</p>
+                      <p className="text-xs leading-relaxed text-slate-300">
+                        {selectedProject.problem}
+                      </p>
                     </div>
                   )}
                   {selectedProject.solution && (
-                    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3.5">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400 mb-1">
+                    <div className="rounded-xl border border-slate-800 bg-[#081316] p-3.5">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-teal-400 mb-1">
                         Solution
                       </p>
-                      <p className="leading-relaxed text-slate-300">{selectedProject.solution}</p>
+                      <p className="text-xs leading-relaxed text-slate-300">
+                        {selectedProject.solution}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -472,10 +669,10 @@ export default function UserModule({ showToast }) {
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                     Key Highlights
                   </p>
-                  <ul className="space-y-1.5">
+                  <ul className="space-y-1.5 text-xs">
                     {selectedProject.highlights.map((item, idx) => (
                       <li key={idx} className="flex items-start gap-2">
-                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-indigo-400 shrink-0" />
+                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-teal-400 shrink-0" />
                         <span>{item}</span>
                       </li>
                     ))}
@@ -488,11 +685,11 @@ export default function UserModule({ showToast }) {
                   <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                     Tech Stack
                   </p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {selectedProject.tech.map((t, i) => (
                       <span
                         key={i}
-                        className="bg-slate-800 text-slate-200 text-xs px-2.5 py-1 rounded border border-slate-700"
+                        className="bg-[#081316] text-slate-200 text-xs px-2.5 py-1 rounded border border-slate-800"
                       >
                         {t}
                       </span>
@@ -502,11 +699,11 @@ export default function UserModule({ showToast }) {
               )}
             </div>
 
-            <div className="flex justify-end border-t border-slate-800 bg-slate-950/50 px-6 py-3.5">
+            <div className="flex justify-end border-t border-slate-800 bg-[#081316] px-6 py-3.5">
               <button
                 type="button"
                 onClick={() => setSelectedProject(null)}
-                className="rounded-lg bg-slate-800 hover:bg-slate-700 px-4 py-2 text-sm font-medium text-white transition"
+                className="rounded-lg bg-slate-800 hover:bg-slate-700 px-4 py-1.5 text-xs font-medium text-white transition"
               >
                 Close
               </button>
