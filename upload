@@ -1,0 +1,51 @@
+import os
+
+
+def combine_text_files(output_filename="combined_output.txt"):
+  start_dir = os.getcwd()
+  output_path = os.path.join(start_dir, output_filename)
+
+  with open(output_path, "w", encoding="utf-8") as outfile:
+    for root, dirs, files in os.walk(start_dir):
+      # Skip hidden directories (like .git, .venv, etc.)
+      dirs[:] = [d for d in dirs if not d.startswith(".")]
+
+      for file in sorted(files):
+        file_path = os.path.join(root, file)
+
+        # Skip the output file itself and hidden files
+        if file_path == output_path or file.startswith("."):
+          continue
+
+        try:
+          # Attempt to read the file as UTF-8 text
+          with open(file_path, "r", encoding="utf-8") as infile:
+            content = infile.read()
+
+          # Skip completely empty files
+          if not content.strip():
+            continue
+
+          # Get relative path for a clean label
+          rel_path = os.path.relpath(file_path, start_dir)
+
+          # Write the label and file content
+          outfile.write(f"{'=' * 60}\n")
+          outfile.write(f"FILE: {rel_path}\n")
+          outfile.write(f"{'=' * 60}\n\n")
+          outfile.write(content)
+          outfile.write("\n\n")
+
+          print(f"Extracted: {rel_path}")
+
+        except UnicodeDecodeError:
+          # Automatically skips binary files (images, executables, zip, etc.)
+          pass
+        except Exception as e:
+          print(f"Skipped {file_path} due to error: {e}")
+
+  print(f"\nDone! All text saved to '{output_filename}'.")
+
+
+if __name__ == "__main__":
+    combine_text_files()
