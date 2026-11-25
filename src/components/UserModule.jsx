@@ -17,9 +17,9 @@ import { useAuth } from '../context/AuthContext';
 const CATEGORIES = ['All', 'Frontend', 'Backend', 'Full Stack'];
 
 const MONO_SERIES = {
-  'Full Stack': { stroke: '#ffffff', dot: 'bg-white' },
-  Frontend: { stroke: '#a1a1aa', dot: 'bg-zinc-400' },
-  Backend: { stroke: '#52525b', dot: 'bg-zinc-600' },
+  'Full Stack': { stroke: '#38bdf8', dot: 'bg-sky-400' },
+  Frontend: { stroke: '#34d399', dot: 'bg-emerald-400' },
+  Backend: { stroke: '#a78bfa', dot: 'bg-violet-400' },
 };
 
 export default function UserModule({ showToast, onOpenAuth, onEditOwn }) {
