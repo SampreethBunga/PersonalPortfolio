@@ -1,41 +1,43 @@
-# Sampreeth Bunga - Portfolio (React + Vite)
+# Sampreeth Bunga — Developer Portfolio & Workspace
 
-A modern Personal Portfolio & Project Showcase application built with **React**, **Vite**, and **Tailwind CSS**. Includes role-based access control (Admin & User modules), project dynamic filtering, contact submission handling, and persistent data operations managed through `localStorage`.
+A frontend portfolio application built with React, Vite, and Tailwind CSS. It combines a visitor-facing project showcase with an interactive workspace dashboard and a role-gated administrative view.
 
-## 🚀 Features
+## Live Demo
 
-- **React + Vite Framework**: Fast HMR and lightweight optimized bundle built for production.
-- **User Module**: Dynamic project showcase filtering (Frontend, Backend, Full Stack), user contact inquiry submissions.
-- **Admin Module**: Restricted dashboard hidden from non-admin users. Complete CRUD operations (Add, Edit, Delete projects) and Inquiry inbox.
-- **Authentication**: LocalStorage login and signup workflow supporting `user` and `admin` roles.
-- **Vercel Ready**: Includes `vercel.json` rewrite configuration for seamless Single Page Application deployment.
+- **Production URL:** https://personal-portfolio-lac-omega.vercel.app/
 
-## 🛠️ Demo Credentials (Seeded automatically)
+## Overview
 
-- **Admin Account**: `admin@portfolio.com` | Password: `admin123`
-- **User Account**: `user@portfolio.com` | Password: `user123`
+Most developer portfolios present static project cards that require visitors to navigate away to understand technical scope or implementation details. This application organizes projects into an interactive workspace with summary metrics, category and technology breakdowns, in-context case-study modals, and a streamlined inquiry workflow.
 
-## 📦 Local Development
+## Features
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+- **Workspace Analytics:** Displays total project counts, distinct technologies, category distribution via an SVG donut chart, and horizontal progress bars for most-used tools.
+- **Interactive Project Showcase:** Supports category filtering (`All`, `Frontend`, `Backend`, `Full Stack`) with live item counts and clickable project cards that open a structured detail modal (problem statement, solution, key highlights, tech stack, and external links).
+- **Role-Based Navigation:** Provides a persistent sidebar with section navigation and separate User and Admin views.
+- **Contact & Admin Management:** Integrates asynchronous form submissions via Web3Forms with toast feedback, alongside an Admin Dashboard to add, edit, or remove projects and review or clear submitted inquiries.
 
-2. Start the Vite development server:
-   ```bash
-   npm run dev
-   ```
+## Tech Stack
 
-3. Build for production:
-   ```bash
-   npm run build
-   ```
+- **Framework & Build Tool:** React, Vite
+- **Styling & Icons:** Tailwind CSS, Lucide React
+- **Integrations & Hosting:** Web3Forms, Vercel, Vercel Speed Insights
 
-## 🌐 Deploying to Vercel
+## Project Structure
 
-1. Push this repository to GitHub.
-2. Go to [Vercel](https://vercel.com) and click **Add New Project**.
-3. Import your GitHub repository.
-4. Keep framework preset as **Vite** (Build command: `npm run build`, Output directory: `dist`).
-5. Click **Deploy**.
+```text
+├── index.html
+├── package.json
+├── tailwind.config.js
+├── vite.config.js
+├── vercel.json
+└── src/
+    ├── App.jsx
+    ├── main.jsx
+    ├── index.css
+    ├── context/
+    │   └── AuthContext.jsx
+    └── components/
+        ├── UserModule.jsx
+        ├── AdminModule.jsx
+        └── AuthModal.jsx
