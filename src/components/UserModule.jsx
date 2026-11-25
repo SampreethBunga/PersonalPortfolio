@@ -24,55 +24,80 @@ const CATEGORY_COLORS = {
 
 const DEFAULT_PROJECTS = [
   {
-    id: 101,
-    title: 'E-Commerce Storefront',
-    category: 'Full Stack',
-    description:
-      'Full-featured online shopping platform with product filtering, cart management, and checkout.',
-    problem:
-      'Shoppers often lose cart state or struggle with slow catalog filtering across multi-attribute product lists.',
-    solution:
-      'Built modular catalog filters, predictable cart state updates, and a streamlined checkout flow with responsive layouts.',
-    highlights: [
-      'Instant category and attribute filtering with zero full-page reloads',
-      'Persistent shopping cart with quantity controls and subtotal calculation',
-      'Responsive storefront layout tuned for desktop and mobile viewports',
-    ],
-    tech: ['React', 'Node.js', 'MongoDB', 'Tailwind'],
-  },
-  {
-    id: 102,
-    title: 'Task Management Dashboard',
+    id: 201,
+    title: 'Student Management & Grade Calculator',
     category: 'Frontend',
     description:
-      'Interactive Kanban-style task tracking app with drag-and-drop features and local state persistence.',
+      'React + Vite web application with automated grade/GPA calculation, structured headers/footers, and clean student record views.',
     problem:
-      'Static to-do lists make it hard to track workflow stages and priorities at a glance during fast sprints.',
+      'Calculating course outcomes and student grades across entries manually is slow and prone to arithmetic slips.',
     solution:
-      'Created an interactive Kanban board with column status transitions, visual priorities, and local persistence.',
+      'Built a fast React interface with Math-based grade computation, instant state updates, and responsive Tailwind layouts.',
     highlights: [
-      'Column-based task organization with instant status updates',
-      'Automatic local state persistence across browser reloads',
-      'Clean card hierarchy for rapid sprint status checks',
+      'Automated grade and percentage/GPA calculation using deterministic Math logic',
+      'Clean component layout with dedicated header/footer shell and zero page reloads',
+      'Fast Vite + Tailwind CSS build pipeline ready for live hackathon demos',
     ],
-    tech: ['React', 'JavaScript', 'Tailwind CSS'],
+    tech: ['React', 'Vite', 'JavaScript', 'Tailwind CSS'],
+    githubUrl: 'https://github.com',
+    liveUrl: '',
   },
   {
-    id: 103,
-    title: 'REST API Analytics Engine',
+    id: 202,
+    title: 'Interactive Portfolio & Admin Workspace',
+    category: 'Full Stack',
+    description:
+      'Role-aware portfolio showcase with a visitor dashboard, project case-study modal, Web3Forms contact flow, and gated admin view.',
+    problem:
+      'Standard portfolio sites present static cards without category telemetry, deep case-study previews, or live content management.',
+    solution:
+      'Structured separate User and Admin views with live KPI/donut/stack analytics, modal case studies, and instant form feedback.',
+    highlights: [
+      'Dynamic KPI metrics, category donut breakdown, and tech stack bar chart',
+      'Interactive case-study modal with problem/solution context and keyboard dismiss',
+      'Admin workflow for managing projects and inquiries plus Web3Forms submission',
+    ],
+    tech: ['React', 'Tailwind CSS', 'Web3Forms', 'Vercel'],
+    githubUrl: 'https://github.com',
+    liveUrl: window.location.origin,
+  },
+  {
+    id: 203,
+    title: 'STM32 Real-Time Patient Health Monitor',
     category: 'Backend',
     description:
-      'High-performance backend service for tracking API requests, rate-limiting, and error logging.',
+      'Embedded firmware workflow on STM32 NUCLEO-F401RE / F446RE for acquiring physiological readings, scaling values, and flagging alerts.',
     problem:
-      'Unmonitored endpoints risk traffic spikes, abuse, and blind spots when diagnosing production errors.',
+      'Raw sensor readings need real-time unit scaling and threshold checks without blocking deterministic microcontroller execution.',
     solution:
-      'Engineered middleware for request telemetry, rate-limiting protection, and structured error logs.',
+      'Implemented structured timer/peripheral sampling and integer/floating-point scaling operations on STM32 Nucleo hardware.',
     highlights: [
-      'Request throughput tracking and structured error log capture',
-      'Rate-limiting guardrails to protect endpoints under burst load',
-      'Relational storage schema for querying historical endpoint metrics',
+      'Targeted STM32 NUCLEO-F401RE and F446RE development boards with clean register/HAL logic',
+      'Accurate sensor calibration multiplication and division scaling for readable vitals',
+      'Designed for predictable real-time loop execution and clear viva/demo walkthroughs',
     ],
-    tech: ['Node.js', 'Express', 'PostgreSQL', 'Docker'],
+    tech: ['Embedded C', 'STM32 Nucleo', 'Timers & ADC', 'Hardware'],
+    githubUrl: 'https://github.com',
+    liveUrl: '',
+  },
+  {
+    id: 204,
+    title: 'Python Pathfinding & CSP Solver Suite',
+    category: 'Frontend',
+    description:
+      'Algorithmic implementations for grid/graph pathfinding and constraint satisfaction problems (CSPs) focused on clarity and correctness.',
+    problem:
+      'Exploring search heuristics and constraint propagation is hard when logic is tangled inside unorganized scripts.',
+    solution:
+      'Separated search/constraint rules, state transitions, and evaluation checks into modular, testable Python routines.',
+    highlights: [
+      'Covers shortest-path search strategies and constraint satisfaction assignments',
+      'Clean state representation and pruning logic to cut redundant exploration',
+      'Easy to trace step-by-step when explaining algorithm trade-offs to judges',
+    ],
+    tech: ['Python', 'Pathfinding', 'CSP', 'Algorithms'],
+    githubUrl: 'https://github.com',
+    liveUrl: '',
   },
 ];
 
@@ -699,7 +724,29 @@ export default function UserModule({ showToast }) {
               )}
             </div>
 
-            <div className="flex justify-end border-t border-slate-800 bg-[#081316] px-6 py-3.5">
+            <div className="flex flex-wrap items-center justify-end gap-2.5 border-t border-slate-800 bg-[#081316] px-6 py-3.5">
+              {selectedProject.githubUrl && (
+                <a
+                  href={selectedProject.githubUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 hover:bg-slate-800 px-3.5 py-1.5 text-xs font-medium text-slate-200 transition"
+                >
+                  <span>GitHub</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </a>
+              )}
+              {selectedProject.liveUrl && (
+                <a
+                  href={selectedProject.liveUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-teal-500 hover:bg-teal-400 px-3.5 py-1.5 text-xs font-semibold text-slate-950 transition"
+                >
+                  <span>Live App</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </a>
+              )}
               <button
                 type="button"
                 onClick={() => setSelectedProject(null)}
